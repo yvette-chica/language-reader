@@ -1,4 +1,5 @@
 import express from 'express';
+import db from './db/database.js';
 
 const app = express();
 const PORT = 3001;
