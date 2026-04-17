@@ -2,7 +2,7 @@
 -- SQLite compatible. For PostgreSQL, change INTEGER PRIMARY KEY to SERIAL PRIMARY KEY
 -- and DATETIME to TIMESTAMPTZ.
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   email           TEXT NOT NULL UNIQUE,
   password_hash   TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE users (
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title       TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE courses (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE lessons (
+CREATE TABLE IF NOT EXISTS lessons (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   course_id       INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
@@ -32,13 +32,13 @@ CREATE TABLE lessons (
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE transcripts (
+CREATE TABLE IF NOT EXISTS transcripts (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   lesson_id  INTEGER NOT NULL UNIQUE REFERENCES lessons(id) ON DELETE CASCADE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE transcript_segments (
+CREATE TABLE IF NOT EXISTS transcript_segments (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   transcript_id  INTEGER NOT NULL REFERENCES transcripts(id) ON DELETE CASCADE,
   sequence_order INTEGER NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE transcript_segments (
   text           TEXT NOT NULL
 );
 
-CREATE TABLE vocab_lists (
+CREATE TABLE IF NOT EXISTS vocab_lists (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name       TEXT NOT NULL,    -- e.g. Week 1, Travel words, B2 prep
@@ -55,7 +55,7 @@ CREATE TABLE vocab_lists (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE words (
+CREATE TABLE IF NOT EXISTS words (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   lesson_id       INTEGER REFERENCES lessons(id) ON DELETE SET NULL, -- nullable
@@ -68,15 +68,15 @@ CREATE TABLE words (
   saved_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE word_vocab_lists (
+CREATE TABLE IF NOT EXISTS word_vocab_lists (
   word_id       INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
   vocab_list_id INTEGER NOT NULL REFERENCES vocab_lists(id) ON DELETE CASCADE,
   PRIMARY KEY (word_id, vocab_list_id)
 );
 
 -- Indexes for common queries
-CREATE INDEX idx_courses_user_language ON courses(user_id, language);
-CREATE INDEX idx_lessons_course ON lessons(course_id);
-CREATE INDEX idx_segments_transcript ON transcript_segments(transcript_id, sequence_order);
-CREATE INDEX idx_words_user ON words(user_id, language);
-CREATE INDEX idx_words_status ON words(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_courses_user_language ON courses(user_id, language);
+CREATE INDEX IF NOT EXISTS idx_lessons_course ON lessons(course_id);
+CREATE INDEX IF NOT EXISTS idx_segments_transcript ON transcript_segments(transcript_id, sequence_order);
+CREATE INDEX IF NOT EXISTS idx_words_user ON words(user_id, language);
+CREATE INDEX IF NOT EXISTS idx_words_status ON words(user_id, status);
