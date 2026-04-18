@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import db from './db/database.js';
+import morgan from 'morgan';
 import authRoutes from './routes/auth.js';
 import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
@@ -8,6 +9,9 @@ import transcriptsRoutes from './routes/transcripts.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Log requests to the console
+app.use(morgan('dev'));
 
 // Parse incoming JSON request bodies
 app.use(express.json());
