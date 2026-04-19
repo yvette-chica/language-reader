@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS words (
   source_language TEXT NOT NULL,    -- language the translation is in
   context         TEXT,             -- full sentence the word appeared in
   status          TEXT NOT NULL DEFAULT 'unknown', -- unknown, recognized, familiar, learned
+  attributes      TEXT,                            -- JSON, language-specific metadata e.g. {"gender": "feminine"}
   saved_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
