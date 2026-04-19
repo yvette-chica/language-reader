@@ -8,10 +8,11 @@ Currently focused on **German** and **Hungarian**.
 
 ## What It Does
 
-1. **Import audio** — paste a URL or upload an audio file from the internet
-2. **Auto-transcribe** — generates a time-stamped transcript from the audio
+1. **Import audio** — paste a podcast URL, YouTube URL, or upload an audio file
+2. **Transcribe** — generate a timestamped transcript using local Whisper, or paste existing text (e.g. from LibriVox / Project Gutenberg) and add timing manually
 3. **Read along** — follow the transcript in sync while the audio plays
-4. **Look up words** — tap any word to translate it and save it to your vocabulary list
+4. **Sentence mode** — play one sentence at a time; repeat as many times as needed before moving on
+5. **Look up words** — tap any word to translate it and save it to your vocabulary list
 
 ---
 
@@ -21,7 +22,8 @@ Currently focused on **German** and **Hungarian**.
 |---|---|---|
 | Frontend | React (PWA) | Works in browser and installable on mobile |
 | Backend | Node.js + Express | Local server; portable to hosting later |
-| Transcription | Whisper (local) | Free, runs on your machine; can switch to OpenAI Whisper API later |
+| Transcription | faster-whisper (local) | Free, runs on your machine; can switch to OpenAI Whisper API later |
+| Audio extraction | yt-dlp | Extracts audio from YouTube and other sites before transcription |
 | Translation | DeepL API (free tier) | 500k characters/month free; excellent for German and Hungarian |
 | Database | SQLite | Zero setup, single file; swap to PostgreSQL when hosting |
 
@@ -51,11 +53,13 @@ Node.js + Express (local server)
 
 ## Planned Features
 
-- [ ] Import audio via URL or file upload
-- [ ] Auto-generate transcript with word-level timestamps
+- [ ] Import audio via URL (podcast, YouTube) or file upload
+- [ ] Generate transcript with Whisper (user-triggered) or paste existing text manually
+- [ ] Edit transcript segment timing
 - [ ] Synchronized audio + transcript playback
+- [ ] Sentence mode — play one sentence at a time for focused listening
 - [ ] Tap a word to see translation
-- [ ] Save unknown words to a personal vocabulary list
+- [ ] Save unknown words to a personal vocabulary list, with language-specific metadata (e.g. grammatical gender)
 - [ ] Review saved vocabulary
 
 ---
