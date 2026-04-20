@@ -56,7 +56,8 @@ function downloadYouTubeAudio(url) {
 // Run the Python transcription script on a local file, returns segments array
 function runTranscribeScript(audioPath) {
   return new Promise((resolve, reject) => {
-    const python = spawn('python', [TRANSCRIBE_SCRIPT, audioPath]);
+    const PYTHON = join(__dirname, '../.venv/bin/python');
+    const python = spawn(PYTHON, [TRANSCRIBE_SCRIPT, audioPath]);
 
     let stdout = '';
     let stderr = '';

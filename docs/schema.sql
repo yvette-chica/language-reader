@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS transcript_segments (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   transcript_id  INTEGER NOT NULL REFERENCES transcripts(id) ON DELETE CASCADE,
   sequence_order INTEGER NOT NULL,
-  start_time     REAL NOT NULL, -- seconds, e.g. 12.4
-  end_time       REAL NOT NULL,
+  start_time     REAL,          -- seconds, e.g. 12.4 — nullable for manual transcripts
+  end_time       REAL,
   text           TEXT NOT NULL
 );
 
