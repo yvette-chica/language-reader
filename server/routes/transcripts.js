@@ -32,7 +32,11 @@ router.get('/', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'Transcript not found' });
   }
 
-  res.json(transcript);
+  const segments = db.prepare(
+    'SELECT * FROM transcript_segments WHERE transcript_id = ? ORDER BY sequence_order'
+  ).all(transcript.id);
+
+  res.json({ ...transcript, segments });
 });
 
 // POST /api/courses/:courseId/lessons/:lessonId/transcript
