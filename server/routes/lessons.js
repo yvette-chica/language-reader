@@ -61,4 +61,43 @@ router.post('/', requireAuth, (req, res) => {
   res.status(201).json(lesson);
 });
 
+// PATCH /api/courses/:courseId/lessons/:lessonId — update a lesson title
+router.patch('/:lessonId', requireAuth, (req, res) => {
+  const course = getCourseForUser(req.params.courseId, req.user.id);
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  const lesson = db.prepare('SELECT * FROM lessons WHERE id = ? AND course_id = ?').get(req.params.lessonId, req.params.courseId);
+  if (!lesson) {
+    return res.status(404).json({ error: 'Lesson not found' });
+  }
+
+  const { title } = req.body;
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  db.prepare('UPDATE lessons SET title = ? WHERE id = ?').run(title.trim(), req.params.lessonId);
+
+  const updated = db.prepare('SELECT * FROM lessons WHERE id = ?').get(req.params.lessonId);
+  res.json(updated);
+});
+
+// DELETE /api/courses/:courseId/lessons/:lessonId — delete a lesson
+router.delete('/:lessonId', requireAuth, (req, res) => {
+  const course = getCourseForUser(req.params.courseId, req.user.id);
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  const lesson = db.prepare('SELECT * FROM lessons WHERE id = ? AND course_id = ?').get(req.params.lessonId, req.params.courseId);
+  if (!lesson) {
+    return res.status(404).json({ error: 'Lesson not found' });
+  }
+
+  db.prepare('DELETE FROM lessons WHERE id = ?').run(req.params.lessonId);
+  res.status(204).send();
+});
+
 export default router;

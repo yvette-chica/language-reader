@@ -34,4 +34,33 @@ router.post('/', requireAuth, (req, res) => {
   res.status(201).json(course);
 });
 
+// PATCH /api/courses/:courseId — update a course title
+router.patch('/:courseId', requireAuth, (req, res) => {
+  const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(req.params.courseId, req.user.id);
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  const { title } = req.body;
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  db.prepare('UPDATE courses SET title = ? WHERE id = ?').run(title.trim(), req.params.courseId);
+
+  const updated = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.courseId);
+  res.json(updated);
+});
+
+// DELETE /api/courses/:courseId — delete a course
+router.delete('/:courseId', requireAuth, (req, res) => {
+  const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(req.params.courseId, req.user.id);
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  db.prepare('DELETE FROM courses WHERE id = ?').run(req.params.courseId);
+  res.status(204).send();
+});
+
 export default router;

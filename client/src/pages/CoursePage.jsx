@@ -16,6 +16,11 @@ function CoursePage() {
   const [newAudioUrl, setNewAudioUrl] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const [editingCourse, setEditingCourse] = useState(false)
+  const [editCourseTitle, setEditCourseTitle] = useState('')
+  const [savingCourse, setSavingCourse] = useState(false)
+  const [confirmDeleteCourse, setConfirmDeleteCourse] = useState(false)
+
   useEffect(() => {
     Promise.all([
       api.get(`/courses`),
@@ -53,23 +58,104 @@ function CoursePage() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>
-  if (error) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-red-500 text-sm">{error}</p></div>
+  async function handleSaveCourse(e) {
+    e.preventDefault()
+    setSavingCourse(true)
+    try {
+      const updated = await api.patch(`/courses/${courseId}`, { title: editCourseTitle })
+      setCourse(updated)
+      setEditingCourse(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingCourse(false)
+    }
+  }
+
+  async function handleDeleteCourse() {
+    try {
+      await api.delete(`/courses/${courseId}`)
+      navigate('/')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  if (loading) return <div className="bg-gray-50 min-h-screen flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>
+  if (error) return <div className="bg-gray-50 min-h-screen flex items-center justify-center"><p className="text-red-500 text-sm">{error}</p></div>
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate('/')}
-            className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+            className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer shrink-0"
           >
             ← Courses
           </button>
           <span className="text-gray-300">/</span>
-          <h1 className="text-2xl font-semibold text-gray-800">{course.title}</h1>
-          <span className="text-sm text-gray-400 bg-gray-100 rounded px-2 py-0.5">{course.language}</span>
+
+          {editingCourse ? (
+            <form onSubmit={handleSaveCourse} className="flex items-center gap-2 flex-1">
+              <input
+                autoFocus
+                value={editCourseTitle}
+                onChange={e => setEditCourseTitle(e.target.value)}
+                required
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                type="submit"
+                disabled={savingCourse}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {savingCourse ? '...' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingCourse(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </form>
+          ) : confirmDeleteCourse ? (
+            <div className="flex items-center gap-3 flex-1">
+              <h1 className="text-2xl font-semibold text-gray-800">{course.title}</h1>
+              <span className="text-sm text-gray-500">Delete?</span>
+              <button
+                onClick={handleDeleteCourse}
+                className="text-sm text-red-500 hover:text-red-700 font-medium cursor-pointer"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmDeleteCourse(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 flex-1">
+              <h1 className="text-2xl font-semibold text-gray-800">{course.title}</h1>
+              <span className="text-sm text-gray-400 bg-gray-100 rounded px-2 py-0.5">{course.language}</span>
+              <button
+                onClick={() => { setEditingCourse(true); setEditCourseTitle(course.title) }}
+                className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setConfirmDeleteCourse(true)}
+                className="text-sm text-gray-400 hover:text-red-500 cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mb-4">

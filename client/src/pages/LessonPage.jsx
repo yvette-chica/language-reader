@@ -38,6 +38,11 @@ function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const [editingLesson, setEditingLesson] = useState(false)
+  const [editLessonTitle, setEditLessonTitle] = useState('')
+  const [savingLesson, setSavingLesson] = useState(false)
+  const [confirmDeleteLesson, setConfirmDeleteLesson] = useState(false)
+
   const [selected, setSelected] = useState(null) // { word, context }
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(null)
@@ -71,6 +76,29 @@ function LessonPage() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [courseId, lessonId])
+
+  async function handleSaveLesson(e) {
+    e.preventDefault()
+    setSavingLesson(true)
+    try {
+      const updated = await api.patch(`/courses/${courseId}/lessons/${lessonId}`, { title: editLessonTitle })
+      setLesson(updated)
+      setEditingLesson(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingLesson(false)
+    }
+  }
+
+  async function handleDeleteLesson() {
+    try {
+      await api.delete(`/courses/${courseId}/lessons/${lessonId}`)
+      navigate(`/courses/${courseId}`)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   function handleWordClick(word, context) {
     setSelected({ word, context })
@@ -117,12 +145,70 @@ function LessonPage() {
           <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => navigate(`/courses/${courseId}`)}
-              className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer shrink-0"
             >
               ← {course.title}
             </button>
             <span className="text-gray-300">/</span>
-            <h1 className="text-2xl font-semibold text-gray-800">{lesson.title}</h1>
+
+            {editingLesson ? (
+              <form onSubmit={handleSaveLesson} className="flex items-center gap-2 flex-1">
+                <input
+                  autoFocus
+                  value={editLessonTitle}
+                  onChange={e => setEditLessonTitle(e.target.value)}
+                  required
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                <button
+                  type="submit"
+                  disabled={savingLesson}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  {savingLesson ? '...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingLesson(false)}
+                  className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : confirmDeleteLesson ? (
+              <div className="flex items-center gap-3 flex-1">
+                <h1 className="text-2xl font-semibold text-gray-800">{lesson.title}</h1>
+                <span className="text-sm text-gray-500">Delete?</span>
+                <button
+                  onClick={handleDeleteLesson}
+                  className="text-sm text-red-500 hover:text-red-700 font-medium cursor-pointer"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteLesson(false)}
+                  className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 flex-1">
+                <h1 className="text-2xl font-semibold text-gray-800">{lesson.title}</h1>
+                <button
+                  onClick={() => { setEditingLesson(true); setEditLessonTitle(lesson.title) }}
+                  className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteLesson(true)}
+                  className="text-sm text-gray-400 hover:text-red-500 cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
 
           {lesson.audio_url && (

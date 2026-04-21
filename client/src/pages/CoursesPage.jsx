@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, clearToken } from '../api.js'
+import { api } from '../api.js'
 
 function CoursesPage() {
   const [courses, setCourses] = useState([])
@@ -36,31 +36,18 @@ function CoursesPage() {
     }
   }
 
-  function handleLogout() {
-    clearToken()
-    navigate('/login')
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50 min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-semibold text-gray-800">My Courses</h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
-            >
-              New course
-            </button>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
-            >
-              Log out
-            </button>
-          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+          >
+            New course
+          </button>
         </div>
 
         {showForm && (
@@ -99,9 +86,7 @@ function CoursesPage() {
         )}
 
         {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
-
         {loading && <p className="text-sm text-gray-400">Loading...</p>}
-
         {!loading && courses.length === 0 && (
           <p className="text-sm text-gray-400">No courses yet. Create one to get started.</p>
         )}
