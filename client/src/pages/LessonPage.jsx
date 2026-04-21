@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 
@@ -6,10 +6,10 @@ function cleanWord(token) {
   return token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
 }
 
-function Segment({ text, onWordClick }) {
+function Segment({ text, onWordClick, isActive }) {
   const tokens = text.split(/(\s+)/)
   return (
-    <p className="text-gray-800 leading-relaxed mb-3 last:mb-0">
+    <p className={`leading-relaxed mb-3 last:mb-0 transition-colors ${isActive ? 'text-indigo-700 underline underline-offset-4 decoration-indigo-300' : 'text-gray-800'}`}>
       {tokens.map((token, i) => {
         if (/^\s+$/.test(token)) return <span key={i}>{token}</span>
         const word = cleanWord(token)
@@ -41,6 +41,19 @@ function LessonPage() {
   const [selected, setSelected] = useState(null) // { word, context }
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(null)
+
+  const audioRef = useRef(null)
+  const [activeSegmentId, setActiveSegmentId] = useState(null)
+
+  function handleTimeUpdate() {
+    const t = audioRef.current?.currentTime
+    if (t == null || !transcript?.segments) return
+    const active = transcript.segments.find(
+      seg => seg.start_time != null && t >= seg.start_time && t < seg.end_time
+    )
+    const id = active?.id ?? null
+    setActiveSegmentId(prev => prev === id ? prev : id)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -114,7 +127,7 @@ function LessonPage() {
 
           {lesson.audio_url && (
             <div className="mb-8">
-              <audio controls src={lesson.audio_url} className="w-full" />
+              <audio ref={audioRef} controls src={lesson.audio_url} onTimeUpdate={handleTimeUpdate} className="w-full" />
             </div>
           )}
 
@@ -125,7 +138,7 @@ function LessonPage() {
           ) : (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               {transcript.segments.map(seg => (
-                <Segment key={seg.id} text={seg.text} onWordClick={handleWordClick} />
+                <Segment key={seg.id} text={seg.text} onWordClick={handleWordClick} isActive={seg.id === activeSegmentId} />
               ))}
             </div>
           )}
