@@ -23,6 +23,21 @@ router.get('/', requireAuth, (req, res) => {
   res.json(lessons);
 });
 
+// GET /api/courses/:courseId/lessons/:lessonId — get a single lesson
+router.get('/:lessonId', requireAuth, (req, res) => {
+  const course = getCourseForUser(req.params.courseId, req.user.id);
+  if (!course) {
+    return res.status(404).json({ error: 'Course not found' });
+  }
+
+  const lesson = db.prepare('SELECT * FROM lessons WHERE id = ? AND course_id = ?').get(req.params.lessonId, req.params.courseId);
+  if (!lesson) {
+    return res.status(404).json({ error: 'Lesson not found' });
+  }
+
+  res.json(lesson);
+});
+
 // POST /api/courses/:courseId/lessons — create a new lesson
 router.post('/', requireAuth, (req, res) => {
   const course = getCourseForUser(req.params.courseId, req.user.id);
