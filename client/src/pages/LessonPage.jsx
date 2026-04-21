@@ -43,6 +43,11 @@ function LessonPage() {
   const [savingLesson, setSavingLesson] = useState(false)
   const [confirmDeleteLesson, setConfirmDeleteLesson] = useState(false)
 
+  const [generating, setGenerating] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(false)
+  const [manualText, setManualText] = useState('')
+  const [submittingManual, setSubmittingManual] = useState(false)
+
   const [selected, setSelected] = useState(null) // { word, context }
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(null)
@@ -97,6 +102,33 @@ function LessonPage() {
       navigate(`/courses/${courseId}`)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleGenerateWhisper() {
+    setGenerating(true)
+    try {
+      const result = await api.post(`/courses/${courseId}/lessons/${lessonId}/transcript/whisper`)
+      setTranscript(result)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function handleManualSubmit(e) {
+    e.preventDefault()
+    setSubmittingManual(true)
+    try {
+      const result = await api.post(`/courses/${courseId}/lessons/${lessonId}/transcript/manual`, { text: manualText })
+      setTranscript(result)
+      setShowManualForm(false)
+      setManualText('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmittingManual(false)
     }
   }
 
@@ -218,7 +250,58 @@ function LessonPage() {
           )}
 
           {!transcript ? (
-            <p className="text-sm text-gray-400">No transcript yet for this lesson.</p>
+            <div className="bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center gap-4 text-center">
+              <p className="text-gray-500 font-medium">No transcript yet</p>
+
+              {generating ? (
+                <p className="text-sm text-indigo-500">Generating transcript, this may take a minute…</p>
+              ) : showManualForm ? (
+                <form onSubmit={handleManualSubmit} className="w-full flex flex-col gap-3 text-left">
+                  <textarea
+                    autoFocus
+                    value={manualText}
+                    onChange={e => setManualText(e.target.value)}
+                    required
+                    rows={8}
+                    placeholder="Paste the text here. It will be split into sentences automatically."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={submittingManual}
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    >
+                      {submittingManual ? '...' : 'Save transcript'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowManualForm(false); setManualText('') }}
+                      className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex gap-3">
+                  {lesson.audio_url && (
+                    <button
+                      onClick={handleGenerateWhisper}
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+                    >
+                      Generate with Whisper
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowManualForm(true)}
+                    className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+                  >
+                    Add manually
+                  </button>
+                </div>
+              )}
+            </div>
           ) : transcript.segments.length === 0 ? (
             <p className="text-sm text-gray-400">Transcript is empty.</p>
           ) : (
