@@ -6,7 +6,50 @@ function cleanWord(token) {
   return token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
 }
 
-function Segment({ text, onWordClick, isActive }) {
+const STATUSES = ['unknown', 'recognized', 'familiar', 'learned']
+
+const GENDERS = [
+  { value: 'masculine', label: 'M', active: 'bg-blue-500 border-blue-500 text-white',   inactive: 'border-blue-200 text-blue-600 hover:bg-blue-50' },
+  { value: 'feminine',  label: 'F', active: 'bg-red-500 border-red-500 text-white',     inactive: 'border-red-200 text-red-600 hover:bg-red-50' },
+  { value: 'neuter',    label: 'N', active: 'bg-green-500 border-green-500 text-white', inactive: 'border-green-200 text-green-600 hover:bg-green-50' },
+]
+
+// All class combinations written out explicitly so Tailwind includes them in the build
+const WORD_HIGHLIGHT = {
+  default: {
+    unknown:    'bg-purple-200 text-purple-900 rounded px-0.5',
+    recognized: 'bg-purple-200/60 text-purple-900 rounded px-0.5',
+    familiar:   'bg-purple-200/30 text-purple-900 rounded px-0.5',
+    learned:    'underline decoration-purple-400 underline-offset-2',
+  },
+  masculine: {
+    unknown:    'bg-blue-200 text-blue-900 rounded px-0.5',
+    recognized: 'bg-blue-200/60 text-blue-900 rounded px-0.5',
+    familiar:   'bg-blue-200/30 text-blue-900 rounded px-0.5',
+    learned:    'underline decoration-blue-400 underline-offset-2',
+  },
+  feminine: {
+    unknown:    'bg-red-200 text-red-900 rounded px-0.5',
+    recognized: 'bg-red-200/60 text-red-900 rounded px-0.5',
+    familiar:   'bg-red-200/30 text-red-900 rounded px-0.5',
+    learned:    'underline decoration-red-400 underline-offset-2',
+  },
+  neuter: {
+    unknown:    'bg-green-200 text-green-900 rounded px-0.5',
+    recognized: 'bg-green-200/60 text-green-900 rounded px-0.5',
+    familiar:   'bg-green-200/30 text-green-900 rounded px-0.5',
+    learned:    'underline decoration-green-400 underline-offset-2',
+  },
+}
+
+function savedWordClass(wordData) {
+  const gender = wordData.attributes?.gender
+  const status = wordData.status ?? 'unknown'
+  const group = WORD_HIGHLIGHT[gender] ?? WORD_HIGHLIGHT.default
+  return group[status] ?? WORD_HIGHLIGHT.default.unknown
+}
+
+function Segment({ text, onWordClick, isActive, savedWords }) {
   const tokens = text.split(/(\s+)/)
   return (
     <p className={`leading-relaxed mb-3 last:mb-0 transition-colors ${isActive ? 'text-indigo-700 underline underline-offset-4 decoration-indigo-300' : 'text-gray-800'}`}>
@@ -14,11 +57,16 @@ function Segment({ text, onWordClick, isActive }) {
         if (/^\s+$/.test(token)) return <span key={i}>{token}</span>
         const word = cleanWord(token)
         if (!word) return <span key={i}>{token}</span>
+        const savedWord = savedWords.get(word.toLowerCase())
         return (
           <span
             key={i}
             onClick={() => onWordClick(word, text)}
-            className="cursor-pointer hover:bg-indigo-100 hover:text-indigo-700 rounded px-0.5 transition-colors"
+            className={`cursor-pointer transition-colors ${
+              savedWord
+                ? savedWordClass(savedWord)
+                : 'hover:bg-indigo-100 hover:text-indigo-700 rounded px-0.5'
+            }`}
           >
             {token}
           </span>
@@ -49,11 +97,15 @@ function LessonPage() {
   const [submittingManual, setSubmittingManual] = useState(false)
 
   const [settings, setSettings] = useState(null)
+  const [savedWords, setSavedWords] = useState(new Map()) // lowercase word → word object
 
-  const [selected, setSelected] = useState(null)    // { word, context }
-  const [translation, setTranslation] = useState('') // user's text field
-  const [lookingUp, setLookingUp] = useState(null)   // service name currently fetching, or null
-  const [lookupResult, setLookupResult] = useState(null) // { translation, definition, examples } | { error }
+  const [selected, setSelected] = useState(null)
+  const [translation, setTranslation] = useState('')
+  const [pendingGender, setPendingGender] = useState(null)
+  const [showGenderPicker, setShowGenderPicker] = useState(false)
+  const [wordStatus, setWordStatus] = useState('unknown')
+  const [lookingUp, setLookingUp] = useState(null)
+  const [lookupResult, setLookupResult] = useState(null)
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(null)
 
@@ -76,14 +128,22 @@ function LessonPage() {
       api.get(`/courses/${courseId}/lessons/${lessonId}`),
       api.get(`/courses/${courseId}/lessons/${lessonId}/transcript`).catch(() => null),
       api.get('/settings'),
+      api.get('/words'),
     ])
-      .then(([courses, lessonData, transcriptData, settingsData]) => {
+      .then(([courses, lessonData, transcriptData, settingsData, wordsData]) => {
         const found = courses.find(c => c.id === parseInt(courseId))
         if (!found) throw new Error('Course not found')
         setCourse(found)
         setLesson(lessonData)
         setTranscript(transcriptData)
         setSettings(settingsData)
+
+        // Build map keyed by lowercase word — first occurrence wins (API returns newest first)
+        const wordMap = new Map()
+        wordsData.forEach(w => {
+          if (!wordMap.has(w.word.toLowerCase())) wordMap.set(w.word.toLowerCase(), w)
+        })
+        setSavedWords(wordMap)
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -140,8 +200,12 @@ function LessonPage() {
   }
 
   function handleWordClick(word, context) {
+    const existing = savedWords.get(word.toLowerCase())
     setSelected({ word, context })
-    setTranslation('')
+    setTranslation(existing?.translation ?? '')
+    setWordStatus(existing?.status ?? 'unknown')
+    setPendingGender(existing?.attributes?.gender ?? null)
+    setShowGenderPicker(false)
     setLookupResult(null)
     setLookingUp(null)
     setSavedId(null)
@@ -167,8 +231,29 @@ function LessonPage() {
         translation: translation || null,
         context: selected.context,
         lesson_id: parseInt(lessonId),
+        attributes: pendingGender ? { gender: pendingGender } : null,
       })
+      setSavedWords(prev => new Map(prev).set(saved.word.toLowerCase(), saved))
       setSavedId(saved.id)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleUpdate() {
+    const existing = savedWords.get(selected?.word.toLowerCase())
+    if (!existing) return
+    setSaving(true)
+    try {
+      const updated = await api.patch(`/words/${existing.id}`, {
+        translation: translation || null,
+        status: wordStatus,
+        attributes: pendingGender ? { gender: pendingGender } : null,
+      })
+      setSavedWords(prev => new Map(prev).set(updated.word.toLowerCase(), updated))
+      setSavedId(updated.id)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -186,6 +271,8 @@ function LessonPage() {
       <p className="text-red-500 text-sm">{error}</p>
     </div>
   )
+
+  const existingWord = selected ? savedWords.get(selected.word.toLowerCase()) : null
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -327,7 +414,13 @@ function LessonPage() {
           ) : (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               {transcript.segments.map(seg => (
-                <Segment key={seg.id} text={seg.text} onWordClick={handleWordClick} isActive={seg.id === activeSegmentId} />
+                <Segment
+                  key={seg.id}
+                  text={seg.text}
+                  onWordClick={handleWordClick}
+                  isActive={seg.id === activeSegmentId}
+                  savedWords={savedWords}
+                />
               ))}
             </div>
           )}
@@ -355,11 +448,46 @@ function LessonPage() {
 
             <textarea
               value={translation}
-              onChange={e => setTranslation(e.target.value)}
+              onChange={e => { setTranslation(e.target.value); setSavedId(null) }}
               placeholder="Your translation..."
               rows={2}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
             />
+
+            {(pendingGender || showGenderPicker) ? (
+              <div className="flex items-center gap-1.5">
+                {GENDERS.map(g => (
+                  <button
+                    key={g.value}
+                    title={g.value}
+                    onClick={() => {
+                      setPendingGender(pendingGender === g.value ? null : g.value)
+                      setSavedId(null)
+                    }}
+                    className={`text-xs w-8 h-8 rounded-lg border font-medium cursor-pointer transition-colors ${
+                      pendingGender === g.value ? g.active : g.inactive
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+                {!pendingGender && (
+                  <button
+                    onClick={() => setShowGenderPicker(false)}
+                    className="text-gray-300 hover:text-gray-500 cursor-pointer text-lg leading-none"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowGenderPicker(true)}
+                className="self-start text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                add gender?
+              </button>
+            )}
 
             {settings?.available_services?.length > 0 && (
               <div className="flex flex-col gap-2">
@@ -384,8 +512,8 @@ function LessonPage() {
                     ) : lookupResult.translation ? (
                       <>
                         <p className="text-sm font-medium text-gray-800">{lookupResult.translation}</p>
-                        {lookupResult.definition && (
-                          <p className="text-xs text-gray-400">{lookupResult.definition}</p>
+                        {lookupResult.wordclass && (
+                          <p className="text-xs text-gray-400">{lookupResult.wordclass}</p>
                         )}
                         {lookupResult.examples?.length > 0 && (
                           <ul className="flex flex-col gap-1.5">
@@ -399,7 +527,11 @@ function LessonPage() {
                           </ul>
                         )}
                         <button
-                          onClick={() => setTranslation(lookupResult.translation)}
+                          onClick={() => {
+                            setTranslation(lookupResult.translation)
+                            setPendingGender(lookupResult.gender ?? null)
+                            setSavedId(null)
+                          }}
                           className="self-start text-xs text-indigo-500 hover:text-indigo-700 cursor-pointer"
                         >
                           Use this
@@ -417,15 +549,34 @@ function LessonPage() {
               "{selected.context}"
             </div>
 
+            {existingWord && (
+              <div className="flex items-center gap-1">
+                {STATUSES.map((s, i) => (
+                  <button
+                    key={s}
+                    title={s}
+                    onClick={() => { setWordStatus(s); setSavedId(null) }}
+                    className={`w-8 h-8 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
+                      wordStatus === s
+                        ? 'bg-indigo-500 border-indigo-500 text-white'
+                        : 'border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {savedId ? (
               <p className="text-sm text-green-600 font-medium">Saved!</p>
             ) : (
               <button
-                onClick={handleSave}
+                onClick={existingWord ? handleUpdate : handleSave}
                 disabled={saving}
                 className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 cursor-pointer"
               >
-                {saving ? '...' : 'Save word'}
+                {saving ? '...' : existingWord ? 'Update' : 'Save word'}
               </button>
             )}
           </>

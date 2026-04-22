@@ -22,7 +22,8 @@ export async function lookup(word, wordLanguage, sourceLang, apiKey) {
 
   return {
     translation: data.translations?.[0]?.text ?? null,
-    definition: null,
+    wordclass: null,
     examples: [],
+    gender: null,
   };
 }

@@ -17,7 +17,8 @@ export async function lookup(word, wordLanguage, sourceLang) {
 
   return {
     translation: data.responseData?.translatedText ?? null,
-    definition: null,
+    wordclass: null,
     examples: [],
+    gender: null,
   };
 }
