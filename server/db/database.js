@@ -17,4 +17,11 @@ db.pragma('foreign_keys = ON');
 const schema = readFileSync(join(__dirname, '../../docs/schema.sql'), 'utf8');
 db.exec(schema);
 
+// Migrations for columns added after initial release
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN lookup_service TEXT NOT NULL DEFAULT 'mymemory'`);
+} catch {
+  // Column already exists — safe to ignore
+}
+
 export default db;

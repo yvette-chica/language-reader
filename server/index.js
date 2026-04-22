@@ -7,6 +7,8 @@ import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
 import transcriptsRoutes from './routes/transcripts.js';
 import wordsRoutes from './routes/words.js';
+import settingsRoutes from './routes/settings.js';
+import lookupRoutes from './routes/lookup.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,6 +25,8 @@ app.use('/api/courses', coursesRoutes);
 app.use('/api/courses/:courseId/lessons', lessonsRoutes);
 app.use('/api/courses/:courseId/lessons/:lessonId/transcript', transcriptsRoutes);
 app.use('/api/words', wordsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/lookup', lookupRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

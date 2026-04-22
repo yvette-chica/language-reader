@@ -6,8 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   email           TEXT NOT NULL UNIQUE,
   password_hash   TEXT NOT NULL,
-  source_language TEXT NOT NULL DEFAULT 'en', -- native/translation language
-  active_language TEXT NOT NULL DEFAULT 'de', -- language currently being studied
+  source_language TEXT NOT NULL DEFAULT 'en',        -- native/translation language
+  active_language TEXT NOT NULL DEFAULT 'de',        -- language currently being studied
+  lookup_service  TEXT NOT NULL DEFAULT 'mymemory', -- mymemory, pons, deepl, none
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -25,7 +25,7 @@ function App() {
       <Route path="/" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
       <Route path="/courses/:courseId" element={<ProtectedLayout><CoursePage /></ProtectedLayout>} />
       <Route path="/courses/:courseId/lessons/:lessonId" element={<ProtectedLayout><LessonPage /></ProtectedLayout>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+<Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

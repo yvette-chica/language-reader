@@ -48,7 +48,12 @@ function LessonPage() {
   const [manualText, setManualText] = useState('')
   const [submittingManual, setSubmittingManual] = useState(false)
 
-  const [selected, setSelected] = useState(null) // { word, context }
+  const [settings, setSettings] = useState(null)
+
+  const [selected, setSelected] = useState(null)    // { word, context }
+  const [translation, setTranslation] = useState('') // user's text field
+  const [lookingUp, setLookingUp] = useState(null)   // service name currently fetching, or null
+  const [lookupResult, setLookupResult] = useState(null) // { translation, definition, examples } | { error }
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(null)
 
@@ -70,13 +75,15 @@ function LessonPage() {
       api.get('/courses'),
       api.get(`/courses/${courseId}/lessons/${lessonId}`),
       api.get(`/courses/${courseId}/lessons/${lessonId}/transcript`).catch(() => null),
+      api.get('/settings'),
     ])
-      .then(([courses, lessonData, transcriptData]) => {
+      .then(([courses, lessonData, transcriptData, settingsData]) => {
         const found = courses.find(c => c.id === parseInt(courseId))
         if (!found) throw new Error('Course not found')
         setCourse(found)
         setLesson(lessonData)
         setTranscript(transcriptData)
+        setSettings(settingsData)
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -134,7 +141,19 @@ function LessonPage() {
 
   function handleWordClick(word, context) {
     setSelected({ word, context })
+    setTranslation('')
+    setLookupResult(null)
+    setLookingUp(null)
     setSavedId(null)
+  }
+
+  function handleLookup(service) {
+    setLookingUp(service)
+    setLookupResult(null)
+    api.get(`/lookup?word=${encodeURIComponent(selected.word)}&language=${encodeURIComponent(course.language)}&service=${service}`)
+      .then(result => setLookupResult(result))
+      .catch(err => setLookupResult({ error: err.message }))
+      .finally(() => setLookingUp(null))
   }
 
   async function handleSave() {
@@ -144,7 +163,8 @@ function LessonPage() {
       const saved = await api.post('/words', {
         word: selected.word,
         language: course.language,
-        source_language: 'en',
+        source_language: settings?.source_language ?? 'en',
+        translation: translation || null,
         context: selected.context,
         lesson_id: parseInt(lessonId),
       })
@@ -332,6 +352,66 @@ function LessonPage() {
                 ×
               </button>
             </div>
+
+            <textarea
+              value={translation}
+              onChange={e => setTranslation(e.target.value)}
+              placeholder="Your translation..."
+              rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            />
+
+            {settings?.available_services?.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Dictionaries</p>
+                <div className="flex flex-wrap gap-2">
+                  {settings.available_services.map(service => (
+                    <button
+                      key={service}
+                      onClick={() => handleLookup(service)}
+                      disabled={!!lookingUp}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 cursor-pointer transition-colors"
+                    >
+                      {lookingUp === service ? '...' : service}
+                    </button>
+                  ))}
+                </div>
+
+                {lookupResult && (
+                  <div className="bg-gray-50 rounded-lg p-3 flex flex-col gap-2">
+                    {lookupResult.error ? (
+                      <p className="text-xs text-red-400">{lookupResult.error}</p>
+                    ) : lookupResult.translation ? (
+                      <>
+                        <p className="text-sm font-medium text-gray-800">{lookupResult.translation}</p>
+                        {lookupResult.definition && (
+                          <p className="text-xs text-gray-400">{lookupResult.definition}</p>
+                        )}
+                        {lookupResult.examples?.length > 0 && (
+                          <ul className="flex flex-col gap-1.5">
+                            {lookupResult.examples.slice(0, 2).map((ex, i) => (
+                              <li key={i} className="text-xs text-gray-500">
+                                <span className="italic">{ex.source}</span>
+                                <span className="text-gray-300 mx-1">→</span>
+                                <span>{ex.target}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <button
+                          onClick={() => setTranslation(lookupResult.translation)}
+                          className="self-start text-xs text-indigo-500 hover:text-indigo-700 cursor-pointer"
+                        >
+                          Use this
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400">No result found.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3 leading-relaxed italic">
               "{selected.context}"
