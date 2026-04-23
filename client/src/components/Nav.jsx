@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { clearToken } from '../api.js'
 import { useLanguage, LANGUAGES } from '../LanguageContext.jsx'
 import SettingsModal from './SettingsModal.jsx'
@@ -8,6 +8,8 @@ function LanguageDropdown() {
   const { activeLanguage, setActiveLanguage } = useLanguage()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   // Close when clicking outside
   useEffect(() => {
@@ -36,7 +38,11 @@ function LanguageDropdown() {
           {LANGUAGES.map(lang => (
             <button
               key={lang.code}
-              onClick={() => { setActiveLanguage(lang.code); setOpen(false) }}
+              onClick={() => {
+                setActiveLanguage(lang.code)
+                setOpen(false)
+                if (/\/courses\/\d+/.test(location.pathname)) navigate('/')
+              }}
               className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2.5 hover:bg-gray-50 cursor-pointer transition-colors ${
                 activeLanguage === lang.code ? 'text-indigo-600 font-medium' : 'text-gray-700'
               }`}
