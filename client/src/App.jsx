@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { isLoggedIn } from './api.js'
+import { LanguageProvider } from './LanguageContext.jsx'
 import Nav from './components/Nav.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import CoursesPage from './pages/CoursesPage.jsx'
@@ -20,13 +21,15 @@ function ProtectedLayout({ children }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
-      <Route path="/courses/:courseId" element={<ProtectedLayout><CoursePage /></ProtectedLayout>} />
-      <Route path="/courses/:courseId/lessons/:lessonId" element={<ProtectedLayout><LessonPage /></ProtectedLayout>} />
-<Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <LanguageProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
+        <Route path="/courses/:courseId" element={<ProtectedLayout><CoursePage /></ProtectedLayout>} />
+        <Route path="/courses/:courseId/lessons/:lessonId" element={<ProtectedLayout><LessonPage /></ProtectedLayout>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </LanguageProvider>
   )
 }
 
