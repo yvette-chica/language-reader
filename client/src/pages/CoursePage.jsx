@@ -81,11 +81,11 @@ function CoursePage() {
     }
   }
 
-  if (loading) return <div className="bg-gray-50 min-h-screen flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>
-  if (error) return <div className="bg-gray-50 min-h-screen flex items-center justify-center"><p className="text-red-500 text-sm">{error}</p></div>
+  if (loading) return <div className="bg-gray-50 min-h-full flex items-center justify-center"><p className="text-gray-400 text-sm">Loading...</p></div>
+  if (error) return <div className="bg-gray-50 min-h-full flex items-center justify-center"><p className="text-red-500 text-sm">{error}</p></div>
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-full">
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         <div className="flex items-center gap-3 mb-8">

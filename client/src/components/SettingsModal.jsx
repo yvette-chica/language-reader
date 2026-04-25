@@ -8,11 +8,17 @@ const SERVICE_OPTIONS = [
   { value: 'none',    label: 'None — save words without auto-translation' },
 ]
 
+const LAYOUT_OPTIONS = [
+  { value: 'stack', label: 'Stack', description: 'Video above transcript, lookup panel on the side' },
+  { value: 'split', label: 'Split', description: 'Transcript on the left, video and lookup on the right (resizable)' },
+  { value: 'focus', label: 'Focus', description: 'Transcript only, no video shown' },
+]
+
 function SettingsModal({ onClose }) {
   const [settings, setSettings] = useState(null)
   const [service, setService] = useState('')
+  const [layout, setLayout] = useState('stack')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -20,6 +26,7 @@ function SettingsModal({ onClose }) {
       .then(data => {
         setSettings(data)
         setService(data.lookup_service)
+        setLayout(data.lesson_layout ?? 'stack')
       })
       .catch(err => setError(err.message))
   }, [])
@@ -27,11 +34,10 @@ function SettingsModal({ onClose }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
-    setSaved(false)
     try {
-      const updated = await api.patch('/settings', { lookup_service: service })
-      setSettings(updated)
-      setSaved(true)
+      const updated = await api.patch('/settings', { lookup_service: service, lesson_layout: layout })
+      window.dispatchEvent(new CustomEvent('settings-updated', { detail: updated }))
+      onClose()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -61,14 +67,15 @@ function SettingsModal({ onClose }) {
         {!settings ? (
           <p className="text-sm text-gray-400">Loading...</p>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Word lookup service
               </label>
               <select
                 value={service}
-                onChange={e => { setService(e.target.value); setSaved(false) }}
+                onChange={e => setService(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               >
                 {SERVICE_OPTIONS.map(opt => (
@@ -78,6 +85,37 @@ function SettingsModal({ onClose }) {
               <p className="mt-1.5 text-xs text-gray-400">
                 API keys for PONS and DeepL are added to <code className="bg-gray-100 px-1 rounded">server/.env</code>.
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lesson layout
+              </label>
+              <div className="flex flex-col gap-2">
+                {LAYOUT_OPTIONS.map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      layout === opt.value
+                        ? 'border-indigo-400 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="layout"
+                      value={opt.value}
+                      checked={layout === opt.value}
+                      onChange={() => setLayout(opt.value)}
+                      className="mt-0.5 accent-indigo-500"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{opt.label}</p>
+                      <p className="text-xs text-gray-400">{opt.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -90,7 +128,6 @@ function SettingsModal({ onClose }) {
               >
                 {saving ? '...' : 'Save'}
               </button>
-              {saved && <span className="text-sm text-green-600">Saved!</span>}
             </div>
           </form>
         )}

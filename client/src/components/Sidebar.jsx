@@ -5,7 +5,7 @@ import { BookIcon, PlayIcon, FlashcardsIcon, UploadIcon, BarChartIcon, ChevronIc
 function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   // Track last visited lesson so "Now Reading" can return to it
   useEffect(() => {

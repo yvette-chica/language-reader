@@ -23,5 +23,10 @@ try {
 } catch {
   // Column already exists — safe to ignore
 }
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN lesson_layout TEXT NOT NULL DEFAULT 'stack'`);
+} catch {
+  // Column already exists — safe to ignore
+}
 
 export default db;
