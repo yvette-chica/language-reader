@@ -2,6 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 
+function isYouTubeUrl(url) {
+  return url.includes('youtube.com') || url.includes('youtu.be')
+}
+
+function getYouTubeVideoId(url) {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/)
+  return match ? match[1] : null
+}
+
 function cleanWord(token) {
   return token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '')
 }
@@ -110,17 +119,68 @@ function LessonPage() {
   const [savedId, setSavedId] = useState(null)
 
   const audioRef = useRef(null)
+  const ytContainerRef = useRef(null)
+  const ytPlayerRef = useRef(null)
+  const ytIntervalRef = useRef(null)
+  const transcriptRef = useRef(null)
   const [activeSegmentId, setActiveSegmentId] = useState(null)
+
+  useEffect(() => { transcriptRef.current = transcript }, [transcript])
+
+  function updateActiveSegment(t) {
+    const segs = transcriptRef.current?.segments
+    if (!segs) return
+    const active = segs.find(seg => seg.start_time != null && t >= seg.start_time && t < seg.end_time)
+    setActiveSegmentId(prev => { const id = active?.id ?? null; return prev === id ? prev : id })
+  }
 
   function handleTimeUpdate() {
     const t = audioRef.current?.currentTime
-    if (t == null || !transcript?.segments) return
-    const active = transcript.segments.find(
-      seg => seg.start_time != null && t >= seg.start_time && t < seg.end_time
-    )
-    const id = active?.id ?? null
-    setActiveSegmentId(prev => prev === id ? prev : id)
+    if (t != null) updateActiveSegment(t)
   }
+
+  useEffect(() => {
+    if (!lesson?.audio_url || !isYouTubeUrl(lesson.audio_url)) return
+    const videoId = getYouTubeVideoId(lesson.audio_url)
+    if (!videoId) return
+
+    function createPlayer() {
+      ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
+        videoId,
+        playerVars: { rel: 0 },
+        events: {
+          onStateChange(event) {
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              ytIntervalRef.current = setInterval(() => {
+                const t = ytPlayerRef.current?.getCurrentTime?.()
+                if (t != null) updateActiveSegment(t)
+              }, 250)
+            } else {
+              clearInterval(ytIntervalRef.current)
+            }
+          },
+        },
+      })
+    }
+
+    if (window.YT?.Player) {
+      createPlayer()
+    } else {
+      if (!document.getElementById('yt-iframe-api')) {
+        const tag = document.createElement('script')
+        tag.id = 'yt-iframe-api'
+        tag.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(tag)
+      }
+      window.onYouTubeIframeAPIReady = createPlayer
+    }
+
+    return () => {
+      clearInterval(ytIntervalRef.current)
+      ytPlayerRef.current?.destroy?.()
+      ytPlayerRef.current = null
+    }
+  }, [lesson?.audio_url])
 
   useEffect(() => {
     Promise.all([
@@ -352,7 +412,13 @@ function LessonPage() {
 
           {lesson.audio_url && (
             <div className="mb-8">
-              <audio ref={audioRef} controls src={lesson.audio_url} onTimeUpdate={handleTimeUpdate} className="w-full" />
+              {isYouTubeUrl(lesson.audio_url) ? (
+                <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+                  <div ref={ytContainerRef} className="absolute inset-0 w-full h-full" />
+                </div>
+              ) : (
+                <audio ref={audioRef} controls src={lesson.audio_url} onTimeUpdate={handleTimeUpdate} className="w-full" />
+              )}
             </div>
           )}
 
