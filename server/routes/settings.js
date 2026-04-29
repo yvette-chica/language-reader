@@ -6,7 +6,7 @@ const router = Router();
 
 const VALID_SERVICES  = ['mymemory', 'pons', 'deepl', 'none'];
 const VALID_LANGUAGES = ['en', 'de', 'fr', 'es', 'hu'];
-const VALID_LAYOUTS   = ['stack', 'split', 'focus'];
+const VALID_LAYOUTS   = ['stack', 'split', 'focus', 'sentence'];
 
 // GET /api/settings — return current user settings
 router.get('/', requireAuth, (req, res) => {

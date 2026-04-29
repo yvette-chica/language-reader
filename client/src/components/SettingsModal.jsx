@@ -11,7 +11,8 @@ const SERVICE_OPTIONS = [
 const LAYOUT_OPTIONS = [
   { value: 'stack', label: 'Stack', description: 'Video above transcript, lookup panel on the side' },
   { value: 'split', label: 'Split', description: 'Transcript on the left, video and lookup on the right (resizable)' },
-  { value: 'focus', label: 'Focus', description: 'Transcript only, no video shown' },
+  { value: 'focus',    label: 'Focus',    description: 'Transcript only, no video shown' },
+  { value: 'sentence', label: 'Sentence', description: 'One sentence at a time, navigate with ← / →' },
 ]
 
 function SettingsModal({ onClose }) {

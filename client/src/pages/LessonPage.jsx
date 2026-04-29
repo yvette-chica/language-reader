@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 
@@ -122,11 +122,13 @@ function LessonPage() {
   const [savedId, setSavedId] = useState(null)
 
   const audioRef = useRef(null)
-  const ytContainerRef = useRef(null)
+  const ytWrapperRef = useRef(null)
   const ytPlayerRef = useRef(null)
   const ytIntervalRef = useRef(null)
   const transcriptRef = useRef(null)
   const [activeSegmentId, setActiveSegmentId] = useState(null)
+
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0)
 
   // Split layout drag
   const containerRef = useRef(null)
@@ -150,14 +152,21 @@ function LessonPage() {
     if (t != null) updateActiveSegment(t)
   }
 
-  useEffect(() => {
-    if (!lesson?.audio_url || !isYouTubeUrl(lesson.audio_url)) return
+  useLayoutEffect(() => {
+    const wrapper = ytWrapperRef.current
+    if (!wrapper || !lesson?.audio_url || !isYouTubeUrl(lesson.audio_url)) return
     const videoId = getYouTubeVideoId(lesson.audio_url)
     if (!videoId) return
 
+    // Create the inner container imperatively — NOT in React's tree — so YouTube
+    // can replace it with an iframe without desynchronising React's virtual DOM.
+    const container = document.createElement('div')
+    container.className = 'absolute inset-0 w-full h-full'
+    wrapper.appendChild(container)
+
     function createPlayer() {
-      if (!ytContainerRef.current) return
-      ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
+      if (!container.isConnected) return
+      ytPlayerRef.current = new window.YT.Player(container, {
         videoId,
         playerVars: { rel: 0 },
         events: {
@@ -191,6 +200,7 @@ function LessonPage() {
       clearInterval(ytIntervalRef.current)
       ytPlayerRef.current?.destroy?.()
       ytPlayerRef.current = null
+      wrapper.innerHTML = ''
     }
   }, [lesson?.audio_url, settings?.lesson_layout])
 
@@ -223,11 +233,50 @@ function LessonPage() {
   // Sync settings when changed via the modal
   useEffect(() => {
     function onSettingsUpdated(e) {
+      destroyYTPlayer()
       setSettings(e.detail)
     }
     window.addEventListener('settings-updated', onSettingsUpdated)
     return () => window.removeEventListener('settings-updated', onSettingsUpdated)
   }, [])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const LAYOUTS = ['stack', 'split', 'focus', 'sentence']
+
+    function onKeyDown(e) {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+
+      const currentLayout = settings?.lesson_layout ?? 'stack'
+
+      if (e.key === 'j') {
+        updateLayout(LAYOUTS[(LAYOUTS.indexOf(currentLayout) + 1) % LAYOUTS.length])
+        return
+      }
+      if (e.key === 'k') {
+        updateLayout(LAYOUTS[(LAYOUTS.indexOf(currentLayout) - 1 + LAYOUTS.length) % LAYOUTS.length])
+        return
+      }
+
+      if (currentLayout !== 'sentence') return
+      const segs = transcript?.segments
+      if (!segs?.length) return
+
+      if (e.key === 'ArrowLeft' || e.key === 'h') {
+        e.preventDefault()
+        setCurrentSegmentIndex(i => Math.max(0, i - 1))
+      } else if (e.key === 'ArrowRight' || e.key === 'l') {
+        e.preventDefault()
+        setCurrentSegmentIndex(i => Math.min(segs.length - 1, i + 1))
+      } else if (e.key === 'p') {
+        const seg = segs[currentSegmentIndex]
+        if (seg?.start_time != null) playSegment(seg.start_time)
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [settings?.lesson_layout, transcript, currentSegmentIndex])
 
   // Drag-to-resize effect for split layout
   useEffect(() => {
@@ -255,6 +304,29 @@ function LessonPage() {
       document.removeEventListener('mouseup', onMouseUp)
     }
   }, [])
+
+  function destroyYTPlayer() {
+    clearInterval(ytIntervalRef.current)
+    try { ytPlayerRef.current?.destroy() } catch {}
+    ytPlayerRef.current = null
+    if (ytWrapperRef.current) ytWrapperRef.current.innerHTML = ''
+  }
+
+  function updateLayout(next) {
+    destroyYTPlayer()
+    setSettings(prev => ({ ...prev, lesson_layout: next }))
+    api.patch('/settings', { lesson_layout: next }).catch(() => {})
+  }
+
+  function playSegment(startTime) {
+    if (lesson?.audio_url && isYouTubeUrl(lesson.audio_url)) {
+      ytPlayerRef.current?.seekTo(startTime, true)
+      ytPlayerRef.current?.playVideo()
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = startTime
+      audioRef.current.play()
+    }
+  }
 
   async function handleSaveLesson(e) {
     e.preventDefault()
@@ -457,9 +529,7 @@ function LessonPage() {
 
   const playerJSX = lesson.audio_url ? (
     isYouTubeUrl(lesson.audio_url) ? (
-      <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-        <div ref={ytContainerRef} className="absolute inset-0 w-full h-full" />
-      </div>
+      <div ref={ytWrapperRef} className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }} />
     ) : (
       <audio ref={audioRef} controls src={lesson.audio_url} onTimeUpdate={handleTimeUpdate} className="w-full" />
     )
@@ -686,7 +756,7 @@ function LessonPage() {
   // ── Stack layout (default) ───────────────────────────────────────────────────
   if (layout === 'stack') {
     return (
-      <div className="h-full bg-gray-50 flex overflow-hidden">
+      <div key="stack" className="h-full bg-gray-50 flex overflow-hidden">
         <div className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-4 py-8">
             {headerJSX}
@@ -709,24 +779,10 @@ function LessonPage() {
   // ── Split layout ─────────────────────────────────────────────────────────────
   if (layout === 'split') {
     return (
-      <div className="h-full flex overflow-hidden bg-gray-50" ref={containerRef}>
+      <div key="split" className="h-full flex overflow-hidden bg-gray-50" ref={containerRef}>
 
-        {/* Left pane: transcript */}
-        <div style={{ width: `${leftWidth}%` }} className="overflow-y-auto flex-shrink-0">
-          <div className="px-6 py-8">
-            {headerJSX}
-            {transcriptJSX}
-          </div>
-        </div>
-
-        {/* Drag divider */}
-        <div
-          onMouseDown={() => { isDragging.current = true }}
-          className="w-1.5 bg-gray-200 hover:bg-indigo-400 cursor-col-resize flex-shrink-0 transition-colors"
-        />
-
-        {/* Right pane: video + lookup */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white border-l border-gray-100">
+        {/* Left pane: video + lookup */}
+        <div style={{ width: `${leftWidth}%` }} className="flex flex-col overflow-hidden bg-white border-r border-gray-100 flex-shrink-0">
           {playerJSX && (
             <div className="p-4 border-b border-gray-100 flex-shrink-0">
               {playerJSX}
@@ -740,13 +796,114 @@ function LessonPage() {
           </div>
         </div>
 
+        {/* Drag divider */}
+        <div
+          onMouseDown={() => { isDragging.current = true }}
+          className="w-1.5 bg-gray-200 hover:bg-indigo-400 cursor-col-resize flex-shrink-0 transition-colors"
+        />
+
+        {/* Right pane: transcript */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-8">
+            {headerJSX}
+            {transcriptJSX}
+          </div>
+        </div>
+
+      </div>
+    )
+  }
+
+  // ── Sentence layout ──────────────────────────────────────────────────────────
+  if (layout === 'sentence') {
+    const segments = transcript?.segments ?? []
+    const seg = segments[currentSegmentIndex]
+    const hasPrev = currentSegmentIndex > 0
+    const hasNext = currentSegmentIndex < segments.length - 1
+
+    return (
+      <div key="sentence" className="h-full bg-gray-50 flex overflow-hidden">
+
+        {/* Main area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+
+          {/* Header */}
+          <div className="px-6 pt-6 shrink-0">
+            {headerJSX}
+          </div>
+
+          {/* Video */}
+          {playerJSX && (
+            <div className="px-6 pb-4 shrink-0">
+              {playerJSX}
+            </div>
+          )}
+
+          {/* Segment display */}
+          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8">
+            {seg ? (
+              <div className="max-w-2xl w-full bg-white border border-gray-200 rounded-xl p-8 text-lg leading-relaxed">
+                <Segment
+                  text={seg.text}
+                  onWordClick={handleWordClick}
+                  isActive={false}
+                  savedWords={savedWords}
+                  selectedWord={selected?.word}
+                />
+              </div>
+            ) : (
+              <div className="max-w-2xl w-full">
+                {transcriptJSX}
+              </div>
+            )}
+
+            {segments.length > 0 && (
+              <div className="flex items-center gap-6 mt-6">
+                <button
+                  onClick={() => setCurrentSegmentIndex(i => Math.max(0, i - 1))}
+                  disabled={!hasPrev}
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20 cursor-pointer disabled:cursor-default text-xl transition-colors"
+                  title="Previous (h / ←)"
+                >
+                  ←
+                </button>
+                <span className="text-sm text-gray-400 tabular-nums">
+                  {currentSegmentIndex + 1} / {segments.length}
+                </span>
+                <button
+                  onClick={() => setCurrentSegmentIndex(i => Math.min(segments.length - 1, i + 1))}
+                  disabled={!hasNext}
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20 cursor-pointer disabled:cursor-default text-xl transition-colors"
+                  title="Next (l / →)"
+                >
+                  →
+                </button>
+              </div>
+            )}
+
+            <p className="mt-4 text-xs text-gray-300">
+              h/l or ←/→ to navigate · p to play · j/k to switch layout
+            </p>
+          </div>
+
+        </div>
+
+        {/* Lookup sidebar */}
+        <div className={`
+          shrink-0 border-l border-gray-200 bg-white flex flex-col gap-4
+          transition-all duration-200
+          ${selected ? 'w-72 p-6 overflow-y-auto' : 'w-0 p-0 overflow-hidden'}
+        `}>
+          {lookupJSX}
+        </div>
+
       </div>
     )
   }
 
   // ── Focus layout (no video) ──────────────────────────────────────────────────
   return (
-    <div className="h-full bg-gray-50 flex overflow-hidden">
+    <div key="focus" className="h-full bg-gray-50 flex overflow-hidden">
       <div className="flex-1 min-w-0 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-8">
           {headerJSX}
