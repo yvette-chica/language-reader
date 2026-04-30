@@ -29,6 +29,8 @@ async function request(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   })
 
+  if (res.status === 204) return null
+
   const data = await res.json()
 
   if (!res.ok) {

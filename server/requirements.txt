@@ -2,12 +2,14 @@ annotated-doc==0.0.4
 anyio==4.13.0
 av==17.0.1
 certifi==2026.2.25
-click==8.3.2
+charset-normalizer==3.4.7
+click==8.1.8
 ctranslate2==4.7.1
 faster-whisper==1.2.1
 filelock==3.28.0
 flatbuffers==25.12.19
 fsspec==2026.3.0
+gTTS==2.5.4
 h11==0.16.0
 hf-xet==1.4.3
 httpcore==1.0.9
@@ -23,6 +25,7 @@ packaging==26.1
 protobuf==7.34.1
 Pygments==2.20.0
 PyYAML==6.0.3
+requests==2.33.1
 rich==15.0.0
 setuptools==82.0.1
 shellingham==1.5.4
@@ -31,3 +34,4 @@ tokenizers==0.22.2
 tqdm==4.67.3
 typer==0.24.1
 typing_extensions==4.15.0
+urllib3==2.6.3

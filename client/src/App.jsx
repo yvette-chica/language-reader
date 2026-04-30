@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import CoursesPage from './pages/CoursesPage.jsx'
 import CoursePage from './pages/CoursePage.jsx'
 import LessonPage from './pages/LessonPage.jsx'
+import FlashcardsPage from './pages/FlashcardsPage.jsx'
 
 function ProtectedLayout({ children }) {
   if (!isLoggedIn()) {
@@ -33,6 +34,7 @@ function App() {
         <Route path="/" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
         <Route path="/courses/:courseId" element={<ProtectedLayout><CoursePage /></ProtectedLayout>} />
         <Route path="/courses/:courseId/lessons/:lessonId" element={<ProtectedLayout><LessonPage /></ProtectedLayout>} />
+        <Route path="/flashcards" element={<ProtectedLayout><FlashcardsPage /></ProtectedLayout>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </LanguageProvider>

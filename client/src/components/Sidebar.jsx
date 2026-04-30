@@ -21,7 +21,7 @@ function Sidebar() {
     {
       label: 'Library',
       icon: <BookIcon />,
-      active: !isOnLesson,
+      active: !isOnLesson && location.pathname !== '/flashcards',
       onClick: () => navigate('/'),
     },
     {
@@ -31,7 +31,12 @@ function Sidebar() {
       disabled: !lastLesson && !isOnLesson,
       onClick: lastLesson ? () => navigate(lastLesson) : undefined,
     },
-    { label: 'Flashcards',   icon: <FlashcardsIcon />, disabled: true },
+    {
+      label: 'Flashcards',
+      icon: <FlashcardsIcon />,
+      active: location.pathname === '/flashcards',
+      onClick: () => navigate('/flashcards'),
+    },
     { label: 'Upload Audio', icon: <UploadIcon />,     disabled: true },
     { label: 'Progress',     icon: <BarChartIcon />,   disabled: true },
   ]
