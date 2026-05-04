@@ -217,6 +217,7 @@ function LessonPage() {
         if (!found) throw new Error('Course not found')
         setCourse(found)
         setLesson(lessonData)
+        api.post(`/courses/${courseId}/lessons/${lessonId}/visit`).catch(() => {})
         setTranscript(transcriptData)
         setSettings(settingsData)
 

@@ -14,6 +14,7 @@ function CoursePage() {
   const [newTitle, setNewTitle] = useState('')
   const [newType, setNewType] = useState('podcast')
   const [newAudioUrl, setNewAudioUrl] = useState('')
+  const [newThumbnail, setNewThumbnail] = useState(null)
   const [creating, setCreating] = useState(false)
 
   const [editingCourse, setEditingCourse] = useState(false)
@@ -43,13 +44,17 @@ function CoursePage() {
     e.preventDefault()
     setCreating(true)
     try {
-      const body = { title: newTitle, type: newType }
-      if (newAudioUrl.trim()) body.audio_url = newAudioUrl.trim()
-      const lesson = await api.post(`/courses/${courseId}/lessons`, body)
+      const formData = new FormData()
+      formData.append('title', newTitle)
+      formData.append('type', newType)
+      if (newAudioUrl.trim()) formData.append('audio_url', newAudioUrl.trim())
+      if (newThumbnail) formData.append('thumbnail', newThumbnail)
+      const lesson = await api.postForm(`/courses/${courseId}/lessons`, formData)
       setLessons(prev => [...prev, lesson])
       setNewTitle('')
       setNewType('podcast')
       setNewAudioUrl('')
+      setNewThumbnail(null)
       setShowForm(false)
     } catch (err) {
       setError(err.message)
@@ -197,6 +202,15 @@ function CoursePage() {
               onChange={e => setNewAudioUrl(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Thumbnail image (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => setNewThumbnail(e.target.files[0] ?? null)}
+                className="text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100 cursor-pointer"
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 type="submit"

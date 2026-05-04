@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { BookIcon, PlayIcon, FlashcardsIcon, UploadIcon, BarChartIcon, ChevronIcon } from './Icons.jsx'
+import { useLanguage } from '../LanguageContext.jsx'
 
 function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { activeLanguage } = useLanguage()
   const [collapsed, setCollapsed] = useState(true)
 
-  // Track last visited lesson so "Now Reading" can return to it
+  // Track last visited lesson per language so "Now Reading" returns to the right one
   useEffect(() => {
     if (/\/courses\/\d+\/lessons\/\d+/.test(location.pathname)) {
-      localStorage.setItem('lastLesson', location.pathname)
+      const stored = JSON.parse(localStorage.getItem('lastLesson') ?? '{}')
+      stored[activeLanguage] = location.pathname
+      localStorage.setItem('lastLesson', JSON.stringify(stored))
     }
-  }, [location.pathname])
+  }, [location.pathname, activeLanguage])
 
-  const lastLesson = localStorage.getItem('lastLesson')
+  const lastLesson = (() => {
+    try { return JSON.parse(localStorage.getItem('lastLesson') ?? '{}')?.[activeLanguage] ?? null }
+    catch { return null }
+  })()
   const isOnLesson = /\/courses\/\d+\/lessons\/\d+/.test(location.pathname)
 
   const NAV_ITEMS = [

@@ -28,5 +28,15 @@ try {
 } catch {
   // Column already exists — safe to ignore
 }
+try {
+  db.exec(`ALTER TABLE lessons ADD COLUMN last_visited_at TEXT`);
+} catch {
+  // Column already exists — safe to ignore
+}
+try {
+  db.exec(`ALTER TABLE lessons ADD COLUMN thumbnail_url TEXT`);
+} catch {
+  // Column already exists — safe to ignore
+}
 
 export default db;

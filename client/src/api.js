@@ -40,9 +40,25 @@ async function request(method, path, body) {
   return data
 }
 
+async function requestForm(method, path, formData) {
+  // Let the browser set Content-Type (includes multipart boundary)
+  const headers = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: formData })
+
+  if (res.status === 204) return null
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Something went wrong')
+  return data
+}
+
 export const api = {
-  get:    (path)        => request('GET',    path),
-  post:   (path, body)  => request('POST',   path, body),
-  patch:  (path, body)  => request('PATCH',  path, body),
-  delete: (path)        => request('DELETE', path),
+  get:      (path)             => request('GET',    path),
+  post:     (path, body)       => request('POST',   path, body),
+  postForm: (path, formData)   => requestForm('POST', path, formData),
+  patch:    (path, body)       => request('PATCH',  path, body),
+  delete:   (path)             => request('DELETE', path),
 }

@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import db from './db/database.js';
 import morgan from 'morgan';
 import authRoutes from './routes/auth.js';
@@ -10,9 +12,14 @@ import wordsRoutes from './routes/words.js';
 import settingsRoutes from './routes/settings.js';
 import lookupRoutes from './routes/lookup.js'
 import ttsRoutes from './routes/tts.js';
+import recentLessonsRoutes from './routes/recentLessons.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Serve uploaded images
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // Log requests to the console
 app.use(morgan('dev'));
@@ -29,6 +36,7 @@ app.use('/api/words', wordsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/lookup', lookupRoutes);
 app.use('/api/tts', ttsRoutes);
+app.use('/api/lessons', recentLessonsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
