@@ -33,6 +33,12 @@ async function request(method, path, body) {
 
   const data = await res.json()
 
+  if (res.status === 401) {
+    clearToken()
+    window.location.href = '/login'
+    return
+  }
+
   if (!res.ok) {
     throw new Error(data.error || 'Something went wrong')
   }
@@ -51,6 +57,11 @@ async function requestForm(method, path, formData) {
   if (res.status === 204) return null
 
   const data = await res.json()
+  if (res.status === 401) {
+    clearToken()
+    window.location.href = '/login'
+    return
+  }
   if (!res.ok) throw new Error(data.error || 'Something went wrong')
   return data
 }
