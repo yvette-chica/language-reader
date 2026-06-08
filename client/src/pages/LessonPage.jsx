@@ -826,7 +826,7 @@ function LessonPage() {
       <div key="sentence" className="h-full bg-gray-50 flex overflow-hidden">
 
         {/* Main area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-y-auto">
 
           {/* Header */}
           <div className="px-6 pt-6 shrink-0">
@@ -841,7 +841,7 @@ function LessonPage() {
           )}
 
           {/* Segment display */}
-          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8">
+          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8 min-h-fit">
             {seg ? (
               <div className="max-w-2xl w-full bg-white border border-gray-200 rounded-xl p-8 text-lg leading-relaxed">
                 <Segment
